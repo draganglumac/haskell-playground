@@ -64,7 +64,7 @@ beep = putStr "\BEL"
 process :: Char -> String -> IO ()
 process c xs | elem c "qQ\ESC" = quit
              | elem c "dD\BS\DEL" = delete xs
-             | elem c "=\n" = Calculator.eval xs
+             | elem c "=\n" = eval xs
              | elem c "cC" = clear
              | otherwise = press c xs
 
@@ -76,8 +76,9 @@ delete [] = calc []
 delete xs = calc (init xs)
 
 eval :: String -> IO ()
-eval xs = case parse expr xs of
-            [(n, [])] -> calc (show n)
+eval xs = case (parse expr xs) of
+            [(Nothing, [])] -> calc "Undefined"
+            [(Just n, [])]  -> calc (show n)
             _         -> do beep
                             calc xs
 

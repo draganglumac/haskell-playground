@@ -3,34 +3,39 @@ module ArithmeticExpressions where
 import Control.Applicative
 import MonadicParsers
 
--- expr = term + expr | term
--- term = factor * term | factor
--- factor = (expr) | nat
--- nat = 0 | 1 | 2 | ...
+-- expr = term + expr | term - expr | term
+-- term = factor * term | factor / term | factor
+-- factor = (expr) | int
+-- int = ... | -2 | -1 | 0 | 1 | 2 | ...
 
-expr :: Parser Int
+expr :: Parser (Maybe Int)
 expr = do t <- term
           (do symbol "+"
               e <- expr
-              return (t + e))
+              return ((+) <$> t <*> e))
+           <|> (do symbol "-"
+                   e <- expr
+                   return ((-) <$> t <*> e))
            <|> return t
 
-term :: Parser Int
+term :: Parser (Maybe Int)
 term = do f <- factor
           (do symbol "*"
               t <- term
-              return (f * t))
+              return ((*) <$> f <*> t))
+           <|> (do symbol "/"
+                   t <- term
+                   return (safediv f t))
            <|> return f
 
-factor :: Parser Int
+safediv :: Maybe Int -> Maybe Int -> Maybe Int
+safediv x y = case (x, y) of
+                (Just a, Just b) -> if b == 0 then Nothing else Just (div a b)
+                otherwise        -> Nothing
+
+factor :: Parser (Maybe Int)
 factor = do symbol "("
             e <- expr
             symbol ")"
             return e
-         <|> natural
-
-eval :: String -> Int
-eval xs = case (parse expr xs) of
-            [(n, [])]  -> n
-            [(_, out)] -> error ("Unused input " ++ out)
-            []         -> error "Invalid input"
+         <|> Just <$> integer
